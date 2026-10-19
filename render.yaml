@@ -1,0 +1,27 @@
+# Render Blueprint - https://render.com/docs/infrastructure-as-code
+#
+# Deploys the API + dashboard as a single free web service, built from the
+# Dockerfile. Deliberately no database block: the app defaults to SQLite
+# and self-seeds demo data on startup (see app/main.py), so there's no
+# free-tier Postgres 30-day expiry to worry about. If you outgrow SQLite,
+# add a `databases:` block here and set DATABASE_URL as an env var below -
+# the app already reads it from config.py, no code change needed.
+
+services:
+  - type: web
+    name: data-quality-platform
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    # The free plan has 512 MB in all and the search model uses most of it, so uploads are kept small here
+    # (the app's own defaults take 25 MB files, which suits a laptop or a plan with a gigabyte or two to spare).
+    # Take these out when you move to a bigger plan. See the README, "Try a sample, and upload limits".
+    envVars:
+      - key: MAX_UPLOAD_MB
+        value: "5"
+      - key: MAX_CHECK_ROWS
+        value: "30000"
+      - key: MAX_REFERENCE_FILES
+        value: "1"
+      - key: MAX_CONCURRENT_UPLOADS
+        value: "1"

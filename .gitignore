@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.env
+*.db
+data/
+.pytest_cache/
+venv/
+.venv/
+*.egg-info/
+
+# Mac and editor leftovers
+.DS_Store
+.claude/
+
+# safety copies made before each change
+_backup_before_*/

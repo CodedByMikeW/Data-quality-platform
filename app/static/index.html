@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    // Runs synchronously, before the browser restores a remembered scroll
+    // position on refresh - without this, reloading the page after having
+    // scrolled down jumps right back to where you were instead of the top.
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
+    // A second, separate cause of the same symptom: if the URL still has a
+    // #fragment (e.g. from clicking "Explore more" or "See it in action"),
+    // the browser jumps straight to that section on load/refresh regardless
+    // of scrollRestoration. Stripping the hash this early - before the body
+    // and its ids even exist yet - stops that jump from happening at all.
+    // The one hash that is kept is #incident-intelligence: that is the
+    // Production Incident Intelligence page (same document, swapped in by
+    // app.js). Flagging it on <html> this early means a refresh there stays
+    // on that page instead of flashing the dashboard first.
+    if (location.hash === "#incident-intelligence") {
+      document.documentElement.setAttribute("data-view", "incidents");
+    } else if (location.hash) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+  </script>
+  <title>Data Quality Platform — Find out what's actually wrong with your data</title>
+  <meta name="description" content="Upload a dataset and get back a documented quality score, plus the exact rows behind every issue." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js" defer></script>
+  <link rel="stylesheet" href="style.css?v=20261028" />
+</head>
+<body>
+  <!-- ===== PAGE 1: the data quality dashboard (the default view) ===== -->
+  <div class="app-view" id="main-view">
+  <header class="hero-banner">
+    <nav class="site-nav">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="5" y="4" width="14" height="17" rx="2" stroke-linejoin="round" />
+            <rect x="9" y="2" width="6" height="4" rx="1" stroke-linejoin="round" />
+            <path d="M8.5 13l2 2 5-5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span class="brand-name">Data Quality Platform</span>
+        <span class="creator-credit">✧ Created by CodedByMikeW ✧</span>
+      </div>
+      <a href="#live-demo" class="nav-cta">See it in action</a>
+    </nav>
+
+    <div class="hero-content">
+      <div class="hero-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M8 12.5l2.5 2.5L16 9.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <p class="eyebrow">Enterprise data quality platform</p>
+      <h1>Find out what's actually<br />wrong with your data</h1>
+      <p class="hero-copy" id="hero-copy">A documented quality score, and the exact rows behind every issue — down to the row.</p>
+      <a href="#live-demo" class="hero-cta">Explore more</a>
+    </div>
+  </header>
+
+  <section class="how-it-works reveal">
+    <button type="button" class="section-icon scroll-to-upload" aria-label="Jump to the upload form">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+        <rect x="4" y="3" width="16" height="18" rx="2" />
+        <path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round" />
+      </svg>
+    </button>
+    <h2 class="section-label-centered">How it works</h2>
+    <p class="section-intro">
+      Every uploaded dataset runs through the same documented pipeline — no black box, no
+      placeholder numbers. Each number traces back to a formula you can read.
+    </p>
+
+    <div class="steps-row">
+      <button type="button" class="step-col scroll-to-upload" aria-label="Upload a dataset — jump to the upload form">
+        <div class="step-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+            <path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <p class="step-title">Upload a dataset</p>
+        <p class="step-copy">A CSV today — a live database connection is the natural next step.</p>
+      </button>
+      <button type="button" class="step-col scroll-to-upload" aria-label="Checks run automatically — jump to the upload form">
+        <div class="step-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke-linecap="round" />
+          </svg>
+        </div>
+        <p class="step-title">Checks run automatically</p>
+        <p class="step-copy">Each check is an independent, pluggable unit — all eight are live.</p>
+      </button>
+      <button type="button" class="step-col scroll-to-upload" aria-label="A score gets computed — jump to the upload form">
+        <div class="step-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+            <path d="M4 18a8 8 0 0116 0" stroke-linecap="round" />
+            <path d="M12 18l4-6" stroke-linecap="round" />
+            <circle cx="12" cy="18" r="1" />
+          </svg>
+        </div>
+        <p class="step-title">A score gets computed</p>
+        <p class="step-copy">Weighted by check category, documented, reproducible — never a placeholder number.</p>
+      </button>
+      <button type="button" class="step-col scroll-to-upload" aria-label="Explore what's affected — jump to the upload form">
+        <div class="step-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+            <circle cx="11" cy="11" r="6" />
+            <path d="M20 20l-4.5-4.5" stroke-linecap="round" />
+          </svg>
+        </div>
+        <p class="step-title">Explore what's affected</p>
+        <p class="step-copy">Click any check below to see the exact row IDs behind it.</p>
+      </button>
+    </div>
+  </section>
+
+  <section class="demo-section reveal">
+  <div class="demo-intro" id="live-demo">
+    <span class="live-medallion" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path class="live-pulse-line" pathLength="100" d="M2.5 12h4l2.2-6 4 12 2.3-6h6.5" />
+      </svg>
+      <span class="live-orbit"></span>
+      <span class="live-dot"></span>
+    </span>
+    <p class="demo-label"><strong class="demo-label-live">Live demo</strong><span class="demo-label-sep"> &middot; </span><span class="demo-label-part">data quality checker</span><span class="demo-label-sep"> &middot; </span><span class="demo-label-part">upload your own below</span></p>
+    <svg class="demo-pointer" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M6 9.5l6 6 6-6" />
+    </svg>
+  </div>
+
+  <form id="upload-form" class="upload-form">
+    <div class="upload-bar" id="upload-bar">
+      <div class="dataset-group">
+        <span class="dataset-field-label">Label</span>
+        <details class="dataset-field" id="dataset-field" open>
+          <summary class="dataset-chip" id="dataset-chip" aria-label="Dataset label — click to rename" title="This names the dataset for saving. It doesn't search your data.">
+            <span id="dataset-chip-label" data-empty="true">no label set</span>
+            <span class="dataset-chip-edit" aria-hidden="true">✎</span>
+          </summary>
+          <input type="text" id="dataset-name" value="" aria-label="Dataset label" placeholder="e.g. customers" spellcheck="false" />
+        </details>
+      </div>
+      <label class="file-btn">
+        <input type="file" id="file-input" accept=".csv" required />
+        <span id="file-btn-label">Choose CSV</span>
+      </label>
+      <button type="submit" id="run-btn">Run check</button>
+      <button type="button" id="sample-btn" class="sample-btn" title="No CSV handy? Check a made-up business dataset in one click.">Try a sample</button>
+      <p class="form-status" id="form-status" role="status"></p>
+      <p class="upload-limits" id="upload-limits">CSV files up to 25 MB or 1,000,000 rows.</p>
+
+      <div class="save-report-row" id="save-report-row">
+        <label class="save-report-check" title="Saves a summary of the results (score, each check, column names) and the rows you uploaded, at the access level you choose. Opening them takes that level's access code.">
+          <input type="checkbox" id="save-report-checkbox" aria-controls="save-report-options" autocomplete="off" />
+          <span>Save this check and its data to Knowledge Search</span>
+        </label>
+        <div class="save-report-options" id="save-report-options" hidden>
+          <label class="access-level-field">
+            <span class="access-level-field-label">Access level</span>
+            <select id="save-report-access-level" aria-label="Access level for the saved report" autocomplete="off">
+              <option value="public">Public</option>
+              <option value="team" selected>Team</option>
+              <option value="confidential">Confidential</option>
+            </select>
+          </label>
+          <span class="save-report-hint" id="save-report-hint"></span>
+        </div>
+        <p class="save-report-status" id="save-report-status" role="status"></p>
+      </div>
+    </div>
+
+    <section class="sample-bar" id="sample-bar" aria-label="About this sample" hidden>
+      <div class="sample-bar-main">
+        <p class="sample-bar-title">
+          <span class="sample-tag">Sample</span>
+          <strong id="sample-title"></strong>
+          <span class="sample-size" id="sample-size"></span>
+        </p>
+        <p class="sample-bar-desc" id="sample-desc"></p>
+      </div>
+      <div class="sample-bar-actions">
+        <button type="button" id="sample-view-btn" class="sample-action" aria-expanded="false" aria-controls="sample-data-panel">View data</button>
+        <a id="sample-download" class="sample-action" href="#" download="sample.csv">Download CSV</a>
+      </div>
+      <div class="sample-data" id="sample-data-panel" hidden>
+        <div class="sample-data-scroll" tabindex="0" role="region" aria-label="The sample's data">
+          <table class="sample-table" id="sample-table"></table>
+        </div>
+        <p class="sample-data-note" id="sample-data-note"></p>
+      </div>
+    </section>
+
+    <details class="relationships-field" id="relationships-field">
+      <summary class="relationships-toggle">+ Check relationships to other files (optional)</summary>
+      <div class="relationships-body">
+        <p class="relationships-hint">
+          Add a rule to check that a column in the file above only contains values that actually
+          exist in a column of another file — e.g. every order's <code>customer_id</code> must exist
+          in a customers file. Each rule can point at a different file, so you can check against as
+          many related files as you need.
+        </p>
+        <div id="relationships-list"></div>
+        <button type="button" id="add-relationship-btn" class="add-relationship-btn">+ Add relationship</button>
+        <div id="relationships-result" class="relationships-result" hidden></div>
+      </div>
+    </details>
+  </form>
+  </section>
+
+  <main>
+    <section class="scorecard reveal" id="scorecard" aria-live="polite">
+      <div class="skeleton-scorecard">
+        <div class="skeleton skeleton-circle"></div>
+        <div class="skeleton-lines">
+          <div class="skeleton skeleton-line" style="width:40%"></div>
+          <div class="skeleton skeleton-line" style="width:70%"></div>
+          <div class="skeleton skeleton-line" style="width:55%"></div>
+          <div class="skeleton skeleton-line" style="width:30%"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="checks reveal" id="checks-section">
+      <h2 class="section-label">Checks</h2>
+      <div class="checks-grid" id="checks-grid"></div>
+    </section>
+
+    <div class="section-divider reveal" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M2.5 12h4l2.2-6 4 12 2.3-6h6.5" />
+      </svg>
+    </div>
+
+    <section class="knowledge-search reveal" id="knowledge-search">
+      <h2 class="section-label">Knowledge Search</h2>
+      <p class="knowledge-intro">
+        Upload internal documents — PDFs, Word files, CSVs, or plain text — then search them by
+        keyword, by meaning (semantic), or hybrid, which merges both rankings into one list using
+        reciprocal rank fusion. Everything is searchable, and a result you can open cites the exact
+        passage it came from. Access is permission-aware — set a document's access level on upload,
+        and Team and Confidential documents stay locked: you'll see their name and level, but not
+        what's inside, until you enter that level's access code (Confidential also asks for an ID
+        number). Click any document to open it.
+        Re-uploading a filename doesn't overwrite it — it's saved as a new version, with the full
+        history kept for audit. Every search is logged, and anyone with the Team or Confidential
+        code can see the aggregated analytics below — including which queries are coming back empty.
+      </p>
+
+      <form id="document-upload-form" class="document-upload-form">
+        <label class="file-btn">
+          <input type="file" id="document-file-input" accept=".pdf,.docx,.csv,.txt" required />
+          <span id="document-file-label">Choose a file</span>
+        </label>
+        <label class="access-level-field">
+          <span class="access-level-field-label">Access level</span>
+          <select id="document-access-level">
+            <option value="public">Public</option>
+            <option value="team">Team</option>
+            <option value="confidential">Confidential</option>
+          </select>
+        </label>
+        <button type="submit" id="document-upload-btn">Upload document</button>
+        <p class="form-status" id="document-upload-status" role="status"></p>
+      </form>
+
+      <div class="access-panel" id="access-panel">
+        <form class="access-form" id="access-form" autocomplete="off">
+          <label class="access-form-label" for="access-code-input">Access code</label>
+          <input
+            type="text"
+            id="access-code-input"
+            class="access-code-input"
+            inputmode="numeric"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="32"
+            placeholder="Enter a code"
+          />
+          <button type="submit" class="access-unlock-btn" id="access-unlock-btn">Unlock</button>
+          <button type="button" class="access-lock-btn" id="access-lock-btn" hidden>Lock</button>
+          <span class="access-status" id="access-status">Locked — only public documents open.</span>
+        </form>
+        <p class="access-message" id="access-message" role="status"></p>
+
+        <div class="access-hint" id="access-hint" hidden>
+          <span class="access-hint-title">Demo codes</span>
+          <span class="access-hint-item">
+            Team code
+            <button type="button" class="access-hint-code" id="access-hint-team" title="Click to fill it into the code box"></button>
+          </span>
+          <span class="access-hint-item">
+            Confidential code
+            <button type="button" class="access-hint-code" id="access-hint-confidential" title="Click to fill it into the code box"></button>
+            <span class="access-hint-with" id="access-hint-id-group" hidden>
+              + ID number
+              <span class="access-hint-id" id="access-hint-id" title="You'll type this on the ID pad after the Confidential code"></span>
+            </span>
+          </span>
+          <span class="access-hint-note">Public documents need no code. The Confidential code opens Team documents too. Confidential documents also ask for the ID number. These demo codes are visible to everyone, so don't upload anything private here.</span>
+        </div>
+
+        <div class="role-viewer-field">
+          <label for="viewer-role-select">Viewing as</label>
+          <select id="viewer-role-select" autocomplete="off">
+            <option value="employee">Public</option>
+            <option value="manager" disabled>Team — needs the team code</option>
+            <option value="admin" disabled>Confidential — needs the confidential code and ID number</option>
+          </select>
+          <p class="role-viewer-hint">Which documents open for you. Everything is searchable — locked ones ask for their code. Unlocking a code moves this up for you.</p>
+        </div>
+      </div>
+
+      <div class="search-mode-toggle" role="tablist" aria-label="Search mode">
+        <button type="button" class="search-mode-btn active" data-mode="keyword" role="tab" aria-selected="true">Keyword</button>
+        <button type="button" class="search-mode-btn" data-mode="semantic" role="tab" aria-selected="false">Semantic</button>
+        <button type="button" class="search-mode-btn" data-mode="hybrid" role="tab" aria-selected="false">Hybrid</button>
+      </div>
+      <form id="document-search-form" class="document-search-form">
+        <input
+          type="text"
+          id="document-search-input"
+          placeholder="Search your documents…"
+          aria-label="Search your documents"
+        />
+        <button type="submit" id="document-search-btn">Search</button>
+      </form>
+      <div class="search-results" id="search-results" hidden></div>
+
+      <h3 class="documents-list-label">All documents</h3>
+      <div class="documents-list" id="documents-list"></div>
+
+      <div class="search-analytics" id="search-analytics" hidden>
+        <h3 class="documents-list-label">
+          Search analytics <span class="analytics-hint">(Team or Confidential code only)</span>
+          <button type="button" class="delete-data-btn" id="delete-search-logs-btn">Delete search logs</button>
+        </h3>
+        <div id="analytics-summary"></div>
+      </div>
+    </section>
+
+    <section class="incident-teaser reveal" id="incident-teaser">
+      <h2 class="section-label">Production Incident Intelligence</h2>
+      <div class="incident-teaser-card">
+        <div class="incident-teaser-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M3 12h4l3-8 4 16 3-8h4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <div class="incident-teaser-text">
+          <p class="incident-teaser-copy">
+            Upload logs and service metrics. The platform flags anomalies, groups related signals
+            across services into one incident, and ranks which service most likely failed first.
+          </p>
+          <ul class="incident-teaser-chips" aria-label="What it covers">
+            <li>Anomaly detection</li>
+            <li>Error-burst detection</li>
+            <li>Cross-service correlation</li>
+            <li>Root-cause ranking</li>
+            <li>Resolution tracking</li>
+          </ul>
+        </div>
+        <div class="incident-teaser-action">
+          <a class="incident-teaser-btn" id="open-incident-page-btn" href="#incident-intelligence" data-view-link="incidents">
+            Open Incident Intelligence <span aria-hidden="true">&rarr;</span>
+          </a>
+          <span class="incident-teaser-hint">Sample incident data included</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="trend reveal" id="trend-section">
+      <h2 class="section-label">Score history</h2>
+      <div class="trend-chart-wrap">
+        <canvas id="trend-chart" height="80"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <section class="stats-strip reveal">
+    <div class="stat-item">
+      <span class="stat-number">8</span>
+      <span class="stat-label">Checks live</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number">36</span>
+      <span class="stat-label">Automated tests</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number">100%</span>
+      <span class="stat-label">Documented — no black box</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number">2</span>
+      <span class="stat-label">Sample datasets included</span>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-col footer-col-about">
+        <div class="brand footer-brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <rect x="5" y="4" width="14" height="17" rx="2" stroke-linejoin="round" />
+              <rect x="9" y="2" width="6" height="4" rx="1" stroke-linejoin="round" />
+              <path d="M8.5 13l2 2 5-5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span class="brand-name">Data Quality Platform</span>
+        </div>
+        <p class="footer-about">
+          Runs configurable data-quality checks against uploaded datasets, scores the result,
+          and shows exactly which rows are affected — down to the row.
+        </p>
+      </div>
+      <div class="footer-col">
+        <p class="footer-col-title">Links</p>
+        <ul class="footer-links">
+          <li><a href="#live-demo">Live demo</a></li>
+          <li><a href="#checks-section">Checks</a></li>
+          <li><a href="/docs">API docs</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <p class="footer-col-title">Stack</p>
+        <p class="footer-stack">Python &middot; FastAPI &middot; SQLAlchemy &middot; pytest &middot; Chart.js &middot; Docker</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span id="coverage-note"></span>
+    </div>
+  </footer>
+  </div><!-- /#main-view -->
+
+  <!-- ===== PAGE 2: Production Incident Intelligence =====
+       Hidden until <html data-view="incidents"> (URL: #incident-intelligence).
+       This is the section that used to sit inline on the dashboard - same ids,
+       so app.js drives it exactly as before. -->
+  <div class="app-view" id="incident-view">
+    <header class="page-bar">
+      <div class="page-bar-inner">
+        <a class="brand page-bar-brand" href="/" data-view-link="main" aria-label="Data Quality Platform - back to the dashboard">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <rect x="5" y="4" width="14" height="17" rx="2" stroke-linejoin="round" />
+              <rect x="9" y="2" width="6" height="4" rx="1" stroke-linejoin="round" />
+              <path d="M8.5 13l2 2 5-5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span class="brand-name">Data Quality Platform</span>
+        </a>
+        <a class="page-bar-back" id="incident-back-btn" href="/" data-view-link="main">
+          <span aria-hidden="true">&larr;</span> Back to Data Quality
+        </a>
+      </div>
+    </header>
+
+    <main class="incident-page">
+      <section class="incidents" id="incidents">
+        <h1 class="section-label incident-page-title" id="incident-page-title" tabindex="-1">Production Incident Intelligence</h1>
+        <p class="knowledge-intro">
+          Upload application logs and service metrics as CSV — every metric is checked against its
+          own recent trailing baseline, and the same statistical test flags per-minute ERROR/CRITICAL
+          log bursts. Signals within 10 minutes of each other are then correlated into incidents
+          <em>across services</em> — a payments-service outage and the checkout-api cascade it causes
+          a few minutes later show up as one incident, not two unrelated blips. Within each incident,
+          services are ranked by which one started failing first — the standard first heuristic for
+          finding a likely root cause before anyone's done a full investigation — and a per-service
+          timeline shows the cascade shape at a glance. Every incident is also classified critical,
+          warning, or info from its peak severity, duration, and whether it has spread across
+          services — and can be acknowledged or resolved directly below, with a resolution note and
+          mean-time-to-resolution tracked across everything that's been closed out. Sample data below
+          (a payment-gateway outage that cascades into checkout) is auto-seeded so there's something
+          to explore immediately.
+        </p>
+
+        <div class="incident-upload-forms">
+          <form id="logs-upload-form" class="document-upload-form">
+            <label class="file-btn">
+              <input type="file" id="logs-file-input" accept=".csv" required />
+              <span id="logs-file-label">Choose logs CSV</span>
+            </label>
+            <button type="submit" id="logs-upload-btn">Upload logs</button>
+            <p class="form-status" id="logs-upload-status" role="status"></p>
+          </form>
+
+          <form id="metrics-upload-form" class="document-upload-form">
+            <label class="file-btn">
+              <input type="file" id="metrics-file-input" accept=".csv" required />
+              <span id="metrics-file-label">Choose metrics CSV</span>
+            </label>
+            <button type="submit" id="metrics-upload-btn">Upload metrics</button>
+            <p class="form-status" id="metrics-upload-status" role="status"></p>
+          </form>
+        </div>
+
+        <div class="role-viewer-field">
+          <label for="incident-service-select">Service</label>
+          <select id="incident-service-select">
+            <option value="">All services</option>
+          </select>
+          <button type="button" id="run-incident-analysis-btn">Run analysis now</button>
+          <span class="run-status-text" id="run-incident-analysis-status" role="status"></span>
+          <p class="role-viewer-hint">Detection already runs automatically right after every upload — this just re-runs it on demand.</p>
+        </div>
+
+        <div class="incident-columns">
+          <div class="incident-column">
+            <h3 class="documents-list-label">
+              Recent logs
+              <button type="button" class="delete-data-btn" id="delete-incident-logs-btn">Delete all logs</button>
+            </h3>
+            <div class="logs-list" id="logs-list"></div>
+          </div>
+          <div class="incident-column">
+            <h3 class="documents-list-label">Recent metrics</h3>
+            <div class="metrics-list" id="metrics-list"></div>
+          </div>
+          <div class="incident-column">
+            <h3 class="documents-list-label">Anomalies <span class="analytics-hint">&gt;3&sigma; from baseline</span></h3>
+            <div class="anomalies-list" id="anomalies-list"></div>
+          </div>
+          <div class="incident-column">
+            <h3 class="documents-list-label">Error bursts <span class="analytics-hint">per-minute ERROR/CRITICAL rate</span></h3>
+            <div class="anomalies-list" id="log-bursts-list"></div>
+          </div>
+        </div>
+
+        <h3 class="documents-list-label">Correlated incidents <span class="analytics-hint">signals within 10 min, across services</span></h3>
+        <div class="correlated-incidents-list" id="correlated-incidents-list"></div>
+
+        <h3 class="documents-list-label">Incident history</h3>
+        <div id="incident-history-summary"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-grid">
+        <div class="footer-col footer-col-about">
+          <div class="brand footer-brand">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <rect x="5" y="4" width="14" height="17" rx="2" stroke-linejoin="round" />
+              <rect x="9" y="2" width="6" height="4" rx="1" stroke-linejoin="round" />
+              <path d="M8.5 13l2 2 5-5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            </span>
+            <span class="brand-name">Data Quality Platform</span>
+          </div>
+          <p class="footer-about">
+            Production Incident Intelligence turns raw logs and metrics into correlated incidents,
+            ranked by the service most likely to have failed first.
+          </p>
+        </div>
+        <div class="footer-col">
+          <p class="footer-col-title">Links</p>
+          <ul class="footer-links">
+            <li><a href="/" data-view-link="main">Data quality dashboard</a></li>
+            <li><a href="/docs">API docs</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <p class="footer-col-title">Stack</p>
+          <p class="footer-stack">Python &middot; FastAPI &middot; SQLAlchemy &middot; pytest &middot; Chart.js &middot; Docker</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>✧ Created by CodedByMikeW ✧</span>
+      </div>
+    </footer>
+  </div><!-- /#incident-view -->
+
+  <!-- The ID pad: a 5-dot passcode screen. After the Confidential code is accepted, app.js shows it and asks for the ID number. -->
+  <dialog class="id-pad" id="id-pad" aria-labelledby="id-pad-title" aria-describedby="id-pad-subtitle">
+    <div class="id-pad-body" tabindex="-1">
+      <h3 class="id-pad-title" id="id-pad-title">Enter ID number</h3>
+      <p class="id-pad-subtitle" id="id-pad-subtitle">for Confidential documents</p>
+      <div class="id-pad-dots" id="id-pad-dots" aria-hidden="true">
+        <span class="id-pad-dot"></span>
+        <span class="id-pad-dot"></span>
+        <span class="id-pad-dot"></span>
+        <span class="id-pad-dot"></span>
+        <span class="id-pad-dot"></span>
+      </div>
+      <p class="id-pad-status" id="id-pad-status" role="alert"></p>
+      <p class="id-pad-count" id="id-pad-count" role="status" aria-live="polite"></p>
+      <div class="id-pad-keys" id="id-pad-keys">
+        <button type="button" class="id-key" data-digit="1" aria-label="1"><span class="id-key-digit">1</span></button>
+        <button type="button" class="id-key" data-digit="2" aria-label="2"><span class="id-key-digit">2</span><span class="id-key-letters" aria-hidden="true">ABC</span></button>
+        <button type="button" class="id-key" data-digit="3" aria-label="3"><span class="id-key-digit">3</span><span class="id-key-letters" aria-hidden="true">DEF</span></button>
+        <button type="button" class="id-key" data-digit="4" aria-label="4"><span class="id-key-digit">4</span><span class="id-key-letters" aria-hidden="true">GHI</span></button>
+        <button type="button" class="id-key" data-digit="5" aria-label="5"><span class="id-key-digit">5</span><span class="id-key-letters" aria-hidden="true">JKL</span></button>
+        <button type="button" class="id-key" data-digit="6" aria-label="6"><span class="id-key-digit">6</span><span class="id-key-letters" aria-hidden="true">MNO</span></button>
+        <button type="button" class="id-key" data-digit="7" aria-label="7"><span class="id-key-digit">7</span><span class="id-key-letters" aria-hidden="true">PQRS</span></button>
+        <button type="button" class="id-key" data-digit="8" aria-label="8"><span class="id-key-digit">8</span><span class="id-key-letters" aria-hidden="true">TUV</span></button>
+        <button type="button" class="id-key" data-digit="9" aria-label="9"><span class="id-key-digit">9</span><span class="id-key-letters" aria-hidden="true">WXYZ</span></button>
+        <button type="button" class="id-pad-cancel" id="id-pad-cancel">Cancel</button>
+        <button type="button" class="id-key" data-digit="0" aria-label="0"><span class="id-key-digit">0</span></button>
+        <button type="button" class="id-pad-delete" id="id-pad-delete" aria-label="Delete the last digit">Delete</button>
+      </div>
+      <p class="id-pad-hint" id="id-pad-hint" hidden>Demo ID number <span class="id-pad-hint-code" id="id-pad-hint-code"></span></p>
+    </div>
+  </dialog>
+
+  <script src="app.js?v=20261028" defer></script>
+</body>
+</html>
